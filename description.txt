@@ -1,0 +1,39 @@
+[c/ff0000:(THIS MOD IS STILL A WORK-IN-PROGRESS)]
+
+This mod replaces your health with your coins.
+(Any mentions of "Health" or "HP" listed below are for the coins' worth of health instead of actual HP.)
+
+Micromanaging money just became a whole lot worse... Are you up to the challenge?
+
+[c/bbbb00:=== CHANGES ===]
+- Positive life regeneration is completely disabled.  Damage-Over-Time effects, such as "On Fire!" can still drain your health though.
+
+- Healing via the Nurse has been replaced with a trade of [i:73][i/s50:72] for an Extra Life.
+  - Once the trade has been done, you'll have to wait a few days before you can get another Extra Life.
+  - Dying while having Extra Lives will instead give the player 50HP and brief invincibility.
+
+- New and respawning players start with 50 HP
+  - This amount can be increased by consuming Life Crystals [i:29] and Life Fruit [i:1291]
+
+- Running out of coins in your Inventory, Piggy Bank [i:87], Safe [i:346] and Defender's Forge [i:3813] will start a short countdown.  Once this countdown ends, the player will die.
+  - The countdown lasts for 2 seconds in Softcore, 5 seconds in Mediumcore and for 10 seconds in Hardcore
+
+- Picking up Hearts [i:58], Candy Apples [i:1734] and Candy Canes [i:1867] will give +3 HP
+
+- Items that heal the player, such as the Healing Potion [i:188], will give 1/10th the normal amount of health.
+  - For example, consuming a Healing Potion [i:188], which normally gives +100 HP, would give +10 HP instead.
+
+- All monsters drop more money (except for bosses).
+
+- All shop items that don't use custom currency, such as the Defender's Medal [i:3817], have increased prices.
+
+- Invincibility after being hit is doubled in duration
+
+- Pickup range for coins has been slightly increased
+
+[c/bbbb00:=== BUGS ===]
+- Health-increasing items from other mods currently do nothing
+
+- Lifeforce Potion currently does nothing
+
+- Other mods trying to do things to the UI layers might cause problems
