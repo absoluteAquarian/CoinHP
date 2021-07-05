@@ -26,6 +26,7 @@ namespace CoinHP.Items.Weapons{
 			item.useStyle = ItemUseStyleID.HoldingOut;
 			item.shootSpeed = 14f / 3;  //Projectile has 3 updates per tick
 			item.value = Item.buyPrice(gold: 6, silver: 50);
+			item.noMelee = true;
 		}
 
 		public override Vector2? HoldoutOffset()
@@ -45,6 +46,9 @@ namespace CoinHP.Items.Weapons{
 		public override bool Shoot(Player player, ref Vector2 position, ref float speedX, ref float speedY, ref int type, ref int damage, ref float knockBack){
 			//Take away health from the player
 			CoinPlayer mp = player.GetModPlayer<CoinPlayer>();
+
+			//Ensure that the player has the correct health values...
+			player.statLifeMax2 = player.statLife = CoinPlayer.ConvertCoinTotalToHealth(mp.coins);
 
 			long oldCoins = mp.coins;
 

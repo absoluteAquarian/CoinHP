@@ -132,6 +132,23 @@ namespace CoinHP{
 			goldPigVisual = false;
 		}
 
+		public override bool ConsumeAmmo(Item weapon, Item ammo){
+			if(weapon.type == ItemID.CoinGun){
+				switch(ammo.type){
+					case ItemID.CopperCoin:
+						return Main.rand.NextFloat() >= 0.1f;
+					case ItemID.SilverCoin:
+						return Main.rand.NextFloat() >= 0.15f;
+					case ItemID.GoldCoin:
+						return Main.rand.NextFloat() >= 0.25f;
+					case ItemID.PlatinumCoin:
+						return Main.rand.NextFloat() >= 0.5f;
+				}
+			}
+
+			return true;
+		}
+
 		public void UpdateHealth(int newHealth){
 			int copper, silver, gold, platinum;
 			if(newHealth <= AlgorithmFactor){

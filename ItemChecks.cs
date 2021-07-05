@@ -1,4 +1,5 @@
-﻿using Terraria;
+﻿using System.Collections.Generic;
+using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 
@@ -21,6 +22,11 @@ namespace CoinHP{
 			}
 
 			return true;
+		}
+
+		public override void ModifyTooltips(Item item, List<TooltipLine> tooltips){
+			if(item.type == ItemID.CoinGun)
+				tooltips.Add(new TooltipLine(CoreMod.Instance, "ConsumeAmmo", "Has a chance to not consume coins"));
 		}
 	}
 }

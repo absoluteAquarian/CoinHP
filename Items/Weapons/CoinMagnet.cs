@@ -28,6 +28,7 @@ namespace CoinHP.Items.Weapons{
 			item.damage = 5;
 			item.knockBack = 1.1f;
 			item.value = Item.buyPrice(silver: 80, copper: 45);
+			item.noMelee = true;
 			//These two are needed for Shoot to do anything.  Oh well
 			item.shoot = 10;
 			item.shootSpeed = 1f;
@@ -46,6 +47,8 @@ namespace CoinHP.Items.Weapons{
 		public override Vector2? HoldoutOrigin()
 			=> new Vector2(9, 17);
 
+		private int uses;
+
 		public override bool Shoot(Player player, ref Vector2 position, ref float speedX, ref float speedY, ref int type, ref int damage, ref float knockBack){
 			if(Main.myPlayer != player.whoAmI)
 				return false;
@@ -62,7 +65,10 @@ namespace CoinHP.Items.Weapons{
 				bool crit = Main.rand.Next(1, 101) <= player.magicCrit;
 
 				//Hurt the NPC
-				npc.StrikeNPC(damage, knockBack, player.Center.X > npc.Center.X ? -1 : (player.Center.X < npc.Center.X ? 1 : 0), crit);
+				if(uses % 3 == 0)
+					npc.StrikeNPC(damage, knockBack, player.Center.X > npc.Center.X ? -1 : (player.Center.X < npc.Center.X ? 1 : 0), crit);
+
+				uses++;
 
 				if(Main.netMode == NetmodeID.MultiplayerClient)
 					npc.PlayerInteraction(player.whoAmI);

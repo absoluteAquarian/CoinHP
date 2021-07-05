@@ -34,6 +34,8 @@ Micromanaging money just became a whole lot worse... Are you up to the challenge
 
 - Pickup range for coins has been slightly increased
 
+- The Coin Gun [i:905] has a chance to not consume ammo based on what coin type was used for ammo
+
 [c/bbbb00:=== BUGS ===]
 - Health-increasing items from other mods currently do nothing
 
