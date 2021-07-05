@@ -58,8 +58,13 @@ namespace CoinHP{
 				for(int i = 0; i < Main.maxPlayers; i++){
 					Player player = Main.player[i];
 
-					if(player.active && (Main.netMode == NetmodeID.SinglePlayer || Netplay.Clients[i].State == 10))
-						player.GetModPlayer<CoinPlayer>().playerWillDieImmediately = false;
+					if(player != null && player.active && (Main.netMode == NetmodeID.SinglePlayer || Netplay.Clients[i].State == 10)){
+						var mp = player.GetModPlayer<CoinPlayer>();
+
+						//Failsafe
+						if(mp != null)
+							mp.playerWillDieImmediately = false;
+					}
 				}
 			};
 		}

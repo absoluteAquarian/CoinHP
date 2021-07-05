@@ -11,6 +11,9 @@
 
 			On.Terraria.Chest.SetupShop += Detours.Vanilla.Chest_SetupShop;
 
+			On.Terraria.Utils.CoinsCount += Detours.Vanilla.Utils_CoinsCount;
+			On.Terraria.Utils.CoinsCombineStacks += Detours.Vanilla.Utils_CoinsCombineStacks;
+
 			IL.Terraria.GameContent.UI.Elements.UICharacterListItem.DrawSelf += MSIL.Vanilla.UICharacterListItem_DrawSelf;
 			IL.Terraria.Player.ItemCheck += MSIL.Vanilla.Player_ItemCheck;
 

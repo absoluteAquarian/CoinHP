@@ -476,7 +476,11 @@ namespace CoinHP{
 			goldLost = diffGold;
 			platinumLost = diffPlatinum;
 
-			player.BuyItem((int)CombineCounts(diffCopper, diffSilver, diffGold, diffPlatinum));
+			long count = CombineCounts(diffCopper, diffSilver, diffGold, diffPlatinum);
+			do{
+				player.BuyItem((int)(count % int.MaxValue));
+				count %= int.MaxValue;
+			}while(count > int.MaxValue);
 
 			coins = GetCoinCount();
 

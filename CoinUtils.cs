@@ -1,5 +1,8 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
 using Terraria;
+using Terraria.GameContent.UI;
 
 namespace CoinHP{
 	public static class CoinUtils{
