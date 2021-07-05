@@ -1,4 +1,4 @@
 displayName = Coins are Health
 author = absoluteAquarian
-version = 1.0.0.1
+version = 1.0.1
 homepage = https://forums.terraria.org/index.php?threads/coins-are-health.106315/

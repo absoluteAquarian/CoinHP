@@ -27,6 +27,10 @@ namespace CoinHP.API.DirectDetours{
 				//   For some fucking reason, the settings menu draws the resources differently than the inventory UI
 				DetourHook(typeof(Main).GetCachedMethod("DrawInterface_Resources_Life"),
 					typeof(Detours.Vanilla).GetCachedMethod(nameof(Detours.Vanilla.Main_DrawInterface_Resource_Life)));
+
+				//Usage: forcing the "waitingForWorldEnter" bool to be true, even if the player doesn't have data for CoinPlayer
+				DetourHook(typeof(Mod).Assembly.GetType("Terraria.ModLoader.IO.PlayerIO", throwOnError: true).GetCachedMethod("LoadModData"),
+					typeof(Detours.TML).GetCachedMethod(nameof(Detours.TML.PlayerIO_LoadModData)));
 			}catch(Exception ex){
 				throw new Exception("An error occurred while doing patching in CoinHP." +
 					"\nReport this error to the mod devs and disable the mod in the meantime." +

@@ -1,9 +1,13 @@
-﻿using Microsoft.Xna.Framework;
+﻿using CoinHP.Buffs;
+using CoinHP.Projectiles;
+using CoinHP.UI;
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent.Achievements;
+using Terraria.GameInput;
 using Terraria.ID;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
@@ -26,13 +30,49 @@ namespace CoinHP{
 		public int lifeFruit;
 
 		private bool spawnCoinsOnRespawn;
+		private bool needCheckSavings;
 
-		public override TagCompound Save()
-			=> new TagCompound(){
+		public bool wallet;
+		public bool goldPig;
+		public bool goldPigVisual;
+
+		//If the player left the world before they could die
+		private bool chicken;
+
+		public Item[] savings = new Item[4];
+
+		public override TagCompound Save(){
+			chicken = player.statLifeMax2 <= 0 || player.statLife <= 0;
+
+			return new TagCompound(){
 				["lives"] = extraLives,
 				["crystals"] = lifeCrystals,
-				["fruit"] = lifeFruit
+				["fruit"] = lifeFruit,
+				["savings"] = SaveSavings(),
+				["chicken"] = chicken
 			};
+		}
+
+		private TagCompound SaveSavings()
+			=> new TagCompound(){
+				["slot0"] = SaveSavingsSlot(0),
+				["slot1"] = SaveSavingsSlot(1),
+				["slot2"] = SaveSavingsSlot(2),
+				["slot3"] = SaveSavingsSlot(3)
+			};
+
+		private TagCompound SaveSavingsSlot(int slot)
+			=> new TagCompound(){
+				["id"] = savings[slot].type,
+				["stack"] = savings[slot].stack
+			};
+
+		public override void Initialize(){
+			savings = new Item[4];
+
+			for(int i = 0; i < 4; i++)
+				savings[i] = new Item();
+		}
 
 		public override void Load(TagCompound tag){
 			extraLives = tag.GetInt("lives");
@@ -44,25 +84,86 @@ namespace CoinHP{
 
 			lifeCrystals = tag.GetInt("crystals");
 			lifeFruit = tag.GetInt("fruit");
+
+			savings = LoadSavings(tag.GetCompound("savings")) ?? savings;
+
+			chicken = tag.GetBool("chicken");
+
+			waitingForWorldEnter = true;
+		}
+
+		internal bool playerWillDieImmediately;
+		internal bool waitingForWorldEnter;
+
+		public override void OnEnterWorld(Player player){
+			CoreMod.Instance.savingsUI.InitializeSlots(player.GetModPlayer<CoinPlayer>());
+
+			//Uh oh, looks like this player was created before using this mod.  Give them some starting coins
+			//Only give them coins if they didn't try to bypass the "kill when no coins" system though
+			if(!chicken && (player.statLifeMax2 <= 0 || player.statLife <= 0))
+				playerWillDieImmediately = true;
+
+			waitingForWorldEnter = false;
+		}
+
+		private Item[] LoadSavings(TagCompound tag){
+			if(tag is null)
+				return null;
+
+			return new Item[]{
+				LoadSavingsSlot(tag.GetCompound("slot0")),
+				LoadSavingsSlot(tag.GetCompound("slot1")),
+				LoadSavingsSlot(tag.GetCompound("slot2")),
+				LoadSavingsSlot(tag.GetCompound("slot3"))
+			};
+		}
+
+		private Item LoadSavingsSlot(TagCompound tag){
+			Item item = new Item(){
+				type = tag.GetInt("id"),
+				stack = tag.GetInt("stack")
+			};
+			return item;
+		}
+
+		public override void ResetEffects(){
+			wallet = false;
+			goldPig = false;
+			goldPigVisual = false;
 		}
 
 		public void UpdateHealth(int newHealth){
+			int copper, silver, gold, platinum;
+			if(newHealth <= AlgorithmFactor){
+				//Coins -> Health conversion has become too coarse.  Just kill the player
+				coins = 0;
+
+				player.statLife = 0;
+				player.statLifeMax2 = 1;
+
+				copper = silver = gold = platinum = int.MaxValue;
+
+				ModifyCoinCounts(ref copper, ref silver, ref gold, ref platinum);
+
+				return;
+			}
+
 			int diff = newHealth - player.statLife;
 
 			if(diff == 0)
 				return;
-
+			
 			if(diff > 0){
 				//Give coins
 				SpawnCoinsFromHealthOffset(diff);
 			}else{
 				//Remove coins
-				DissectHealthToCoinCounts(-diff, out int diffCopper, out int diffSilver, out int diffGold, out int diffPlatinum);
+				DissectHealthOffsetToCoinCounts(diff, out int diffCopper, out int diffSilver, out int diffGold, out int diffPlatinum);
 
 				player.BuyItem((int)CombineCounts(diffCopper, diffSilver, diffGold, diffPlatinum));
 			}
 
-			DissectHealthToCoinCounts(newHealth, out int copper, out int silver, out int gold, out int platinum);
+			DissectHealthToCoinCounts(newHealth, out copper, out silver, out gold, out platinum);
 
 			coins = CombineCounts(copper, silver, gold, platinum);
 
@@ -70,8 +171,9 @@ namespace CoinHP{
 		}
 
 		//+2 base health per Life Crystal
-		//+0.5 base health per Life Fruit
-		public int GetStartingHealth() => 50 + lifeCrystals * 2 + lifeFruit;
+		//+1 base health per Life Fruit
+		public const int BaseHealth = 50;
+		public int GetStartingHealth() => BaseHealth + lifeCrystals * 2 + lifeFruit;
 
 		public override void PreUpdate(){
 			copperLost = 0;
@@ -82,7 +184,7 @@ namespace CoinHP{
 			//Force "statLifeMax" to behave
 			player.statLifeMax = GetStartingHealth();
 
-			if(spawnCoinsOnRespawn){
+			if(spawnCoinsOnRespawn || playerWillDieImmediately){
 				spawnCoinsOnRespawn = false;
 
 				int health = GetStartingHealth();
@@ -94,8 +196,81 @@ namespace CoinHP{
 				coins = CombineCounts(copper, silver, gold, platinum);
 
 				SpawnCoinsFromHealth(health);
+
+				//Get the coins from the piggy bank
+				needCheckSavings = true;
 			}
 		}
+
+		public override void ProcessTriggers(TriggersSet triggersSet){
+			if(Main.mouseRight && Main.mouseRightRelease){
+				for(int i = 0; i < Main.maxProjectiles; i++){
+					Projectile projectile = Main.projectile[i];
+
+					if(!projectile.active || projectile.owner != player.whoAmI || !(projectile.modProjectile is SavingsPig))
+						continue;
+
+					//Give some wiggle room when clicking the pig
+					Rectangle rect = projectile.Hitbox;
+					rect.Inflate(8, 8);
+
+					if(!rect.Contains(Main.MouseWorld.ToPoint()))
+						continue;
+
+					//Clicking the pig toggles the UI
+					SavingsUI.Visible = !SavingsUI.Visible;
+
+					//Oink
+					Main.PlaySound(SoundID.Item59);
+					break;
+				}
+			}
+		}
+
+		public override void PostUpdateEquips(){
+			var type = ModContent.ProjectileType<SavingsPig>();
+
+			if(goldPig && player.HasBuff(ModContent.BuffType<SavingsBuff>())){
+				if(goldPigVisual && player.ownedProjectileCounts[type] == 0){
+					//Oink
+					Main.PlaySound(SoundID.Item59);
+
+					Projectile.NewProjectile(player.Center, Vector2.UnitX.RotatedByRandom(MathHelper.Pi) * 4f, type, 0, 0, Owner: player.whoAmI);
+				}
+			}else if(player.ownedProjectileCounts[type] > 0){
+				//Oink
+				if(!goldPig)
+					Main.PlaySound(SoundID.Item59);
+
+				goldPig = false;
+
+				for(int i = 0; i < Main.maxProjectiles; i++){
+					Projectile projectile = Main.projectile[i];
+
+					if(!projectile.active || projectile.type != type || projectile.owner != player.whoAmI)
+						continue;
+
+					projectile.Kill();
+				}
+			}
+
+			if(needCheckSavings && goldPig){
+				//Get the saved coins
+				for(int i = 0; i < 4; i++){
+					if(!savings[i].IsAir){
+						player.QuickSpawnItem(savings[i].type, savings[i].stack);
+
+						savings[i].TurnToAir();
+					}
+				}
+
+				CoreMod.Instance.savingsUI.InitializeSlots(this);
+			}
+
+			needCheckSavings = false;
+		}
+
+		private bool forceDeath;
 
 		public override void PostUpdate(){
 			coins = GetCoinCount();
@@ -107,9 +282,13 @@ namespace CoinHP{
 			if(coins <= 0 && !player.dead && !extraLifeUsed){
 				if(respawnDeathDelay == maxDelay)
 					Main.NewText($"WARNING: You will die in {maxDelay / 60} seconds if you do not get any coins in your inventory!", Color.Red);
-				else if(respawnDeathDelay <= 0)
+				else if(respawnDeathDelay <= 0){
+					forceDeath = true;
+
 					player.KillMe(PlayerDeathReason.ByCustomReason(CoinUtils.NoCoinsMessage(player)), 420, 0);
-				else{
+
+					forceDeath = false;
+				}else{
 					player.immuneNoBlink = false;
 					player.immune = true;
 					player.immuneTime = 2;
@@ -234,6 +413,13 @@ namespace CoinHP{
 			regen = 0f;
 		}
 
+		public override bool PreHurt(bool pvp, bool quiet, ref int damage, ref int hitDirection, ref bool crit, ref bool customDamage, ref bool playSound, ref bool genGore, ref PlayerDeathReason damageSource){
+			if(wallet)
+				damage = (int)(damage * 1.25f);
+
+			return true;
+		}
+
 		public override void PostHurt(bool pvp, bool quiet, double damage, int hitDirection, bool crit){
 			//More immune time
 			player.immuneTime *= 2;
@@ -242,6 +428,10 @@ namespace CoinHP{
 		}
 
 		public override bool PreKill(double damage, int hitDirection, bool pvp, ref bool playSound, ref bool genGore, ref PlayerDeathReason damageSource){
+			//Game might try to kill the player before they're given their respawn coins
+			if(waitingForWorldEnter || playerWillDieImmediately)
+				return false;
+
 			//Try to take away an extra life if the player has one
 			if(extraLives > 0){
 				extraLives--;
@@ -256,7 +446,7 @@ namespace CoinHP{
 				CombatText.NewText(r, CombatText.LifeRegenNegative, "-1 EXTRA LIFE", dramatic: true);
 
 				//Give the player some coins so that they don't die immediately
-				SpawnCoinsFromHealth(50);
+				SpawnCoinsFromHealth(BaseHealth);
 
 				return false;
 			}
@@ -268,29 +458,25 @@ namespace CoinHP{
 
 			coins = 0;
 
-			return false;
+			return forceDeath;
 		}
 
 		public void HurtPlayer(int damage){
 			if(damage <= 0)
 				return;
 
-			DissectHealthToCoinCounts(player.statLife + damage, out int curCopper, out int curSilver, out int curGold, out int curPlatinum);
-			DissectHealthToCoinCounts(player.statLife, out int newCopper, out int newSilver, out int newGold, out int newPlatinum);
+			player.statLife += damage;
 
-			long curCoins = CombineCounts(curCopper, curSilver, curGold, curPlatinum);
-			long newCoins = CombineCounts(newCopper, newSilver, newGold, newPlatinum);
+			DissectHealthOffsetToCoinCounts(-damage, out int diffCopper, out int diffSilver, out int diffGold, out int diffPlatinum);
 
-			long diff = curCoins - newCoins;
-
-			SplitCoins(diff, out int diffCopper, out int diffSilver, out int diffGold, out int diffPlatinum);
+			player.statLife -= damage;
 
 			copperLost = diffCopper;
 			silverLost = diffSilver;
 			goldLost = diffGold;
 			platinumLost = diffPlatinum;
 
-			player.BuyItem((int)diff);
+			player.BuyItem((int)CombineCounts(diffCopper, diffSilver, diffGold, diffPlatinum));
 
 			coins = GetCoinCount();
 
@@ -307,7 +493,7 @@ namespace CoinHP{
 		public override void SetupStartInventory(IList<Item> items, bool mediumcoreDeath){
 			//Mediumcore would just use the normal respawn code for giving the player coins
 			if(!mediumcoreDeath){
-				DissectHealthToCoinCounts(50, out int copper, out int silver, out int gold, out int platinum);
+				DissectHealthToCoinCounts(BaseHealth, out int copper, out int silver, out int gold, out int platinum);
 
 				Item item;
 				if(copper > 0){
@@ -358,13 +544,7 @@ namespace CoinHP{
 			if(offset <= 0)
 				return;
 
-			DissectHealthToCoinCounts(player.statLife, out int copper, out int silver, out int gold, out int platinum);
-			DissectHealthToCoinCounts(player.statLife + offset, out int newCopper, out int newSilver, out int newGold, out int newPlatinum);
-
-			long total = CombineCounts(copper, silver, gold, platinum);
-			long newTotal = CombineCounts(newCopper, newSilver, newGold, newPlatinum);
-
-			SplitCoins(newTotal - total, out int diffCopper, out int diffSilver, out int diffGold, out int diffPlatinum);
+			DissectHealthOffsetToCoinCounts(offset, out int diffCopper, out int diffSilver, out int diffGold, out int diffPlatinum);
 
 			if(diffCopper > 0)
 				player.QuickSpawnItem(ItemID.CopperCoin, diffCopper);
@@ -467,15 +647,25 @@ namespace CoinHP{
 		public const float AlgorithmFactor = 6.1f;
 	
 		public static void DissectHealthToCoinCounts(int health, out int copper, out int silver, out int gold, out int platinum){
-			if(health <= 0){
+			if(health <= AlgorithmFactor){
 				copper = silver = gold = platinum = 0;
 				return;
 			}
 
 			float d = health / AlgorithmFactor;
-			long realDamage = Math.Max(1, (long)Math.Ceiling(d * d * d));
+			long realDamage = (long)(d * d * d);
 
 			SplitCoins(realDamage, out copper, out silver, out gold, out platinum);
+		}
+
+		public void DissectHealthOffsetToCoinCounts(int offset, out int copper, out int silver, out int gold, out int platinum){
+			DissectHealthToCoinCounts(player.statLife, out int curCopper, out int curSilver, out int curGold, out int curPlatinum);
+			DissectHealthToCoinCounts(player.statLife + offset, out int offCopper, out int offSilver, out int offGold, out int offPlatinum);
+
+			long curCoins = CombineCounts(curCopper, curSilver, curGold, curPlatinum);
+			long offCoins = CombineCounts(offCopper, offSilver, offGold, offPlatinum);
+
+			SplitCoins(Math.Abs(curCoins - offCoins), out copper, out silver, out gold, out platinum);
 		}
 	
 		public static int ConvertCoinsToHealth(int copper = 0, int silver = 0, int gold = 0, int platinum = 0){

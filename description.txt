@@ -1,4 +1,6 @@
-[c/ff0000:(THIS MOD IS STILL A WORK-IN-PROGRESS)]
+[c/ff0000:THIS MOD IS STILL A WORK-IN-PROGRESS.]
+[c/ff0000:MULTIPLAYER HAS NOT BEEN TESTED.]
+[c/ff0000:USE AT YOUR OWN RISK.]
 
 This mod replaces your health with your coins.
 (Any mentions of "Health" or "HP" listed below are for the coins' worth of health instead of actual HP.)
@@ -14,6 +16,7 @@ Micromanaging money just became a whole lot worse... Are you up to the challenge
 
 - New and respawning players start with 50 HP
   - This amount can be increased by consuming Life Crystals [i:29] and Life Fruit [i:1291]
+  - Players that were created before using this mod and have no coins are considered "new" players
 
 - Running out of coins in your Inventory, Piggy Bank [i:87], Safe [i:346] and Defender's Forge [i:3813] will start a short countdown.  Once this countdown ends, the player will die.
   - The countdown lasts for 2 seconds in Softcore, 5 seconds in Mediumcore and for 10 seconds in Hardcore

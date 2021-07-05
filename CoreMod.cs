@@ -1,15 +1,25 @@
 using CoinHP.API;
 using CoinHP.Gores;
+using CoinHP.UI;
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using Terraria;
 using Terraria.ID;
+using Terraria.Localization;
 using Terraria.ModLoader;
 using Terraria.UI;
 
 namespace CoinHP{
 	public class CoreMod : Mod{
 		public static CoreMod Instance => ModContent.GetInstance<CoreMod>();
+
+		public const string RecipeGroup_EvilBars = "CoinHP: Evil Bars";
+
+		public const string RecipeGroup_T4Bars = "CoinHP: Gold or Platinum Bars";
+
+		internal SavingsUI savingsUI;
+		private UserInterface savingsInterface;
 
 		public override void Load(){
 			if(!Main.dedServ){
@@ -18,6 +28,12 @@ namespace CoinHP{
 
 				CoinInterface.userInterface = new UserInterface();
 				CoinInterface.userInterface.SetState(CoinInterface.ui);
+
+				savingsUI = new SavingsUI();
+				savingsUI.Activate();
+
+				savingsInterface = new UserInterface();
+				savingsInterface.SetState(savingsUI);
 			}
 
 			AddGore("CoinHP/Gores/Coin_Copper", new CoinGore());
@@ -33,10 +49,37 @@ namespace CoinHP{
 			}
 
 			API.DirectDetours.Manager.Load();
+
+			Main.OnPostDraw += gameTime => {
+				if(Main.gameMenu || Main.netMode == NetmodeID.Server)
+					return;
+
+				//Reset the "was going to die" flags in the players
+				for(int i = 0; i < Main.maxPlayers; i++){
+					Player player = Main.player[i];
+
+					if(player.active && (Main.netMode == NetmodeID.SinglePlayer || Netplay.Clients[i].State == 10))
+						player.GetModPlayer<CoinPlayer>().playerWillDieImmediately = false;
+				}
+			};
 		}
+
+		public override void AddRecipeGroups(){
+			RegisterRecipeGroup(RecipeGroup_EvilBars, ItemID.DemoniteBar, new int[]{ ItemID.DemoniteBar, ItemID.CrimtaneBar });
+
+			RegisterRecipeGroup(RecipeGroup_T4Bars, ItemID.GoldBar, new int[]{ ItemID.GoldBar, ItemID.PlatinumBar });
+		}
+
+		private static void RegisterRecipeGroup(string groupName, int itemForAnyName, int[] validTypes)
+			=> RecipeGroup.RegisterGroup(groupName, new RecipeGroup(() => $"{Language.GetTextValue("LegacyMisc.37")} {Lang.GetItemNameValue(itemForAnyName)}", validTypes));
 
 		public override void Unload(){
 			API.DirectDetours.Manager.Unload();
+
+			CoinInterface.ui = null;
+			CoinInterface.userInterface = null;
+			savingsUI = null;
+			savingsInterface = null;
 		}
 
 		public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers){
@@ -56,12 +99,28 @@ namespace CoinHP{
 
 			//Then remove the rest
 			layers.RemoveAt(barsIndex);
-			int layer = layers.FindIndex(gil => gil.Name == "CoinHP: ResourceBars") + 1;
+			int layerIdx = layers.FindIndex(gil => gil.Name == "CoinHP: ResourceBars") + 1;
 
-			while(layers[layer].Name != "Vanilla: Interface Logic 3"){
-				layers.RemoveAt(layer);
-				layer++;
+			while(layers[layerIdx].Name != "Vanilla: Interface Logic 3"){
+				layers.RemoveAt(layerIdx);
+				layerIdx++;
 			}
+
+			int mouseTextIndex = layers.FindIndex(layer => layer.Name.Equals("Vanilla: Mouse Text"));
+
+			if(mouseTextIndex != -1){
+				layers.Insert(mouseTextIndex - 1, new LegacyGameInterfaceLayer("CoinHP: Savings UI", () => {
+						if(SavingsUI.Visible)
+							savingsInterface.Draw(Main.spriteBatch, new GameTime());
+
+						return true;
+					}, InterfaceScaleType.UI));
+			}
+		}
+
+		public override void UpdateUI(GameTime gameTime){
+			if(SavingsUI.Visible)
+				savingsInterface?.Update(gameTime);
 		}
 
 		public override object Call(params object[] args){

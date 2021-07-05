@@ -22,5 +22,22 @@ namespace CoinHP{
 						: "What do you want? I don't have your life freebie item yet.";
 			}
 		}
+
+		public override bool PreNPCLoot(NPC npc){
+			for(int i = 0; i < Main.maxPlayers; i++){
+				Player player = Main.player[i];
+
+				if(player.dead || !player.active)
+					continue;
+
+				if(npc.playerInteraction[i] && player.GetModPlayer<CoinPlayer>().wallet){
+					//Drop more coins
+					npc.value *= 1.25f;
+					return true;
+				}
+			}
+
+			return true;
+		}
 	}
 }
