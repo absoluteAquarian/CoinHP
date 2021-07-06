@@ -36,6 +36,8 @@ namespace CoinHP{
 		public bool goldPig;
 		public bool goldPigVisual;
 
+		internal bool checkHotfix;
+
 		//If the player left the world before they could die
 		private bool chicken;
 
@@ -49,7 +51,8 @@ namespace CoinHP{
 				["crystals"] = lifeCrystals,
 				["fruit"] = lifeFruit,
 				["savings"] = SaveSavings(),
-				["chicken"] = chicken
+				["chicken"] = chicken,
+				["hotfix"] = true
 			};
 		}
 
@@ -90,6 +93,8 @@ namespace CoinHP{
 			chicken = tag.GetBool("chicken");
 
 			waitingForWorldEnter = true;
+
+			checkHotfix = !tag.ContainsKey("hotfix");
 		}
 
 		internal bool playerWillDieImmediately;
@@ -197,9 +202,6 @@ namespace CoinHP{
 			silverLost = 0;
 			goldLost = 0;
 			platinumLost = 0;
-
-			//Force "statLifeMax" to behave
-			player.statLifeMax = GetStartingHealth();
 
 			if(spawnCoinsOnRespawn || playerWillDieImmediately){
 				spawnCoinsOnRespawn = false;
@@ -350,7 +352,8 @@ namespace CoinHP{
 
 			if(item.type == ItemID.LifeCrystal && player.itemAnimation > 0 && mp.lifeCrystals < 15 && player.itemTime == 0){
 				player.itemTime = PlayerHooks.TotalUseTime(item.useTime, player, item);
-				player.statLifeMax += 2;
+				//Need to keep vanilla health increases working as intended
+				player.statLifeMax += 20;
 				player.statLifeMax2 += 2;
 				player.statLife += 2;
 
@@ -371,7 +374,8 @@ namespace CoinHP{
 
 			if(item.type == ItemID.LifeFruit && player.itemAnimation > 0 && mp.lifeFruit < 20 && player.itemTime == 0){
 				player.itemTime = PlayerHooks.TotalUseTime(item.useTime, player, item);
-				player.statLifeMax++;
+				//Need to keep vanilla health increases working as intended
+				player.statLifeMax += 5;
 				player.statLifeMax2++;
 				player.statLife++;
 

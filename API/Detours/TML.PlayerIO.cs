@@ -10,6 +10,10 @@ namespace CoinHP.API.Detours{
 
 			//Ensure that this flag is true, no matter what
 			player.GetModPlayer<CoinPlayer>().waitingForWorldEnter = true;
+
+			//Also, check if the player has CoinPlayer data.  If they do, and the "hotfix" value has been set, reset statLifeMax back to 100
+			if(player.GetModPlayer<CoinPlayer>().checkHotfix)
+				player.statLifeMax = 100;
 		}
 	}
 }
