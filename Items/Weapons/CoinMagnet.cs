@@ -54,47 +54,51 @@ namespace CoinHP.Items.Weapons{
 				return false;
 
 			//Ignore literally everything regarding Shoot and just hurt the baddies near the mouse
-			const float distance = 3 * 16;
-			Rectangle mouseRect = new Rectangle((int)(Main.MouseWorld.X - distance), (int)(Main.MouseWorld.Y - distance), (int)(distance * 2), (int)(distance * 2));
-			for(int i = 0; i < Main.maxNPCs; i++){
-				NPC npc = Main.npc[i];
+			const float mouseDistance = 3 * 16;
+			const float playerDistance = 30 * 16;
 
-				if(!npc.active || npc.lifeMax <= 5 || npc.friendly || npc.immortal || npc.dontTakeDamage || !npc.Hitbox.Intersects(mouseRect))
-					continue;
+			Rectangle mouseRect = new Rectangle((int)(Main.MouseWorld.X - mouseDistance), (int)(Main.MouseWorld.Y - mouseDistance), (int)(mouseDistance * 2), (int)(mouseDistance * 2));
 
-				bool crit = Main.rand.Next(1, 101) <= player.magicCrit;
+			if(uses % 3 == 0){
+				for(int i = 0; i < Main.maxNPCs; i++){
+					NPC npc = Main.npc[i];
 
-				//Hurt the NPC
-				if(uses % 3 == 0)
+					if(!npc.active || npc.lifeMax <= 5 || npc.friendly || npc.immortal || npc.dontTakeDamage || !npc.Hitbox.Intersects(mouseRect))
+						continue;
+
+					bool crit = Main.rand.Next(1, 101) <= player.magicCrit;
+
+					//Hurt the NPC
 					npc.StrikeNPC(damage, knockBack, player.Center.X > npc.Center.X ? -1 : (player.Center.X < npc.Center.X ? 1 : 0), crit);
 
-				uses++;
+					if(Main.netMode == NetmodeID.MultiplayerClient)
+						npc.PlayerInteraction(player.whoAmI);
 
-				if(Main.netMode == NetmodeID.MultiplayerClient)
-					npc.PlayerInteraction(player.whoAmI);
+					if(npc.extraValue < 1)
+						continue;
 
-				if(npc.extraValue < 1)
-					continue;
+					//Succ the coins
+					int succed = Math.Min(2500, (int)npc.extraValue);
 
-				//Succ the coins
-				int succed = Math.Min(2500, (int)npc.extraValue);
+					npc.extraValue -= succed;
 
-				npc.extraValue -= succed;
+					if(succed % 100 != 0)
+						player.QuickSpawnItem(ItemID.CopperCoin, succed % 100);
+					if(succed / 100 != 0)
+						player.QuickSpawnItem(ItemID.SilverCoin, succed / 100);
 
-				if(succed % 100 != 0)
-					player.QuickSpawnItem(ItemID.CopperCoin, succed % 100);
-				if(succed / 100 != 0)
-					player.QuickSpawnItem(ItemID.SilverCoin, succed / 100);
-
-				if(Main.netMode == NetmodeID.MultiplayerClient)
-					NetMessage.SendData(MessageID.SyncExtraValue, ignoreClient: player.whoAmI, number: npc.whoAmI, number2: succed, number3: player.Center.X, number4: player.Center.Y);
+					if(Main.netMode == NetmodeID.MultiplayerClient)
+						NetMessage.SendData(MessageID.SyncExtraValue, ignoreClient: player.whoAmI, number: npc.whoAmI, number2: succed, number3: player.Center.X, number4: player.Center.Y);
+				}
 			}
+
+			uses++;
 
 			//Pick up coins near the mouse
 			for(int i = 0; i < Main.maxItems; i++){
 				Item dropped = Main.item[i];
 
-				if(!dropped.active || dropped.type < ItemID.CopperCoin || dropped.type > ItemID.PlatinumCoin || dropped.DistanceSQ(Main.MouseWorld) > distance * distance)
+				if(!dropped.active || dropped.type < ItemID.CopperCoin || dropped.type > ItemID.PlatinumCoin || dropped.DistanceSQ(Main.MouseWorld) > mouseDistance * mouseDistance || dropped.DistanceSQ(player.Center) > playerDistance * playerDistance)
 					continue;
 
 				//Warp the coin to the player's center

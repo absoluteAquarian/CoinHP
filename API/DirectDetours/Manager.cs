@@ -19,6 +19,8 @@ namespace CoinHP.API.DirectDetours{
 			try{
 				MonoModHooks.RequestNativeAccess();
 
+				// TODO: add another edit into Player.ItemCheck for when using healing items directly instead of only via QuickHeal
+
 				//Usage: Forces hover text for the hearts UI to not display
 				DetourHook(typeof(Main).GetCachedMethod("GUIBarsMouseOverLife"),
 					typeof(Detours.Vanilla).GetCachedMethod(nameof(Detours.Vanilla.Main_GUIBarsMouseOverLife)));

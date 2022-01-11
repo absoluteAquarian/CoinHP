@@ -7,7 +7,7 @@ using Terraria.UI;
 namespace CoinHP{
 	public class CoinUI : UIState{
 		protected override void DrawSelf(SpriteBatch spriteBatch){
-			string text = Language.GetTextValue("LegacyInterface.0") + " " + Main.LocalPlayer.statLife + " / " + Main.LocalPlayer.GetModPlayer<CoinPlayer>().GetStartingHealth();
+			string text = Language.GetTextValue("LegacyInterface.0") + " " + Main.LocalPlayer.statLife + " / " + Main.LocalPlayer.statLifeMax2;
 			Vector2 size = Main.fontMouseText.MeasureString(text);
 
 			const float XAnchor = 630;

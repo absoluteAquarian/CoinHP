@@ -51,8 +51,7 @@ namespace CoinHP{
 				["crystals"] = lifeCrystals,
 				["fruit"] = lifeFruit,
 				["savings"] = SaveSavings(),
-				["chicken"] = chicken,
-				["hotfix"] = true
+				["chicken"] = chicken
 			};
 		}
 
@@ -93,8 +92,6 @@ namespace CoinHP{
 			chicken = tag.GetBool("chicken");
 
 			waitingForWorldEnter = true;
-
-			checkHotfix = !tag.ContainsKey("hotfix");
 		}
 
 		internal bool playerWillDieImmediately;
@@ -161,7 +158,6 @@ namespace CoinHP{
 				coins = 0;
 
 				player.statLife = 0;
-				player.statLifeMax2 = 1;
 
 				copper = silver = gold = platinum = int.MaxValue;
 
@@ -189,7 +185,7 @@ namespace CoinHP{
 
 			coins = CombineCounts(copper, silver, gold, platinum);
 
-			player.statLifeMax2 = player.statLife = newHealth;
+			player.statLife = newHealth;
 		}
 
 		//+2 base health per Life Crystal
@@ -210,7 +206,7 @@ namespace CoinHP{
 
 				DissectHealthToCoinCounts(health, out int copper, out int silver, out int gold, out int platinum);
 
-				player.statLifeMax2 = player.statLife = health;
+				player.statLife = health;
 
 				coins = CombineCounts(copper, silver, gold, platinum);
 
@@ -294,6 +290,12 @@ namespace CoinHP{
 		public override void PostUpdate(){
 			coins = GetCoinCount();
 
+			//Make health modifications 20% effective
+			int diff = player.statLifeMax2 - player.statLifeMax;
+			diff /= 5;
+
+			player.statLifeMax2 = GetStartingHealth() + diff;
+
 			player.statLife = ConvertCoinTotalToHealth(coins);
 
 			int maxDelay = player.difficulty == 2 ? 600 : (player.difficulty == 1 ? 300 : 120);
@@ -354,7 +356,7 @@ namespace CoinHP{
 				player.itemTime = PlayerHooks.TotalUseTime(item.useTime, player, item);
 				//Need to keep vanilla health increases working as intended
 				player.statLifeMax += 20;
-				player.statLifeMax2 += 2;
+				player.statLifeMax2 += 20;
 				player.statLife += 2;
 
 				mp.lifeCrystals++;
@@ -376,7 +378,7 @@ namespace CoinHP{
 				player.itemTime = PlayerHooks.TotalUseTime(item.useTime, player, item);
 				//Need to keep vanilla health increases working as intended
 				player.statLifeMax += 5;
-				player.statLifeMax2++;
+				player.statLifeMax2 += 5;
 				player.statLife++;
 
 				mp.lifeFruit++;
@@ -506,8 +508,6 @@ namespace CoinHP{
 			coins = GetCoinCount();
 
 			player.statLife = ConvertCoinTotalToHealth(coins);
-
-			player.statLifeMax2 = Math.Max(1, player.statLife);
 		}
 
 		public override void OnRespawn(Player player){
